@@ -18,7 +18,7 @@ const EXPECTED_CLIENT_ID = process.env.EXPECTED_CLIENT_ID || "dummy-client-id";
 const EXPECTED_CLIENT_SECRET = process.env.EXPECTED_CLIENT_SECRET || "dummy-client-secret";
 const AUTH_REQUEST_PATH = process.env.AUTH_REQUEST_PATH || "/o/oauth2/v2/auth";
 const ACCESS_TOKEN_REQUEST_PATH = process.env.ACCESS_TOKEN_REQUEST_PATH || "/oauth2/v4/token";
-const USERINFO_REQUEST_URL = process.env.TOKENINFO_REQUEST_URL || "/oauth2/v3/userinfo";
+const USERINFO_REQUEST_URL = process.env.USERINFO_REQUEST_URL || "/oauth2/v3/userinfo";
 const TOKENINFO_REQUEST_URL = process.env.TOKENINFO_REQUEST_URL || "/oauth2/v3/tokeninfo";
 const PERMITTED_REDIRECT_URLS = process.env.PERMITTED_REDIRECT_URLS ? process.env.PERMITTED_REDIRECT_URLS.split(",") : ["http://localhost:8181/auth/login"];
 
@@ -125,10 +125,10 @@ function validateAccessTokenRequest(req, res) {
     success = false;
     msg = errorMsg("client_secret", EXPECTED_CLIENT_SECRET, req.body.client_secret);
   }
-  if (req.session.redirect_uri !== req.body.redirect_uri) {
-    success = false;
-    msg = errorMsg("redirect_uri", req.session.redirect_uri, req.body.redirect_uri);
-  }
+  // if (req.session.redirect_uri !== req.body.redirect_uri) {
+  //   success = false;
+  //   msg = errorMsg("redirect_uri", req.session.redirect_uri, req.body.redirect_uri);
+  // }
   if (!success) {
     const params = {};
     if (msg) {
@@ -167,9 +167,11 @@ function createToken(name, email, expires_in, refresh_token_expires_in, client_s
     token_type: "Bearer"
   };
   id_token2personData[id_token] = authHeader2personData["Bearer " + accesstoken] = {
+    id: 123, // id写死了，有其他场景的自行修改这里
+    name: name,
+    displayName: name,
     email: email,
     email_verified: true,
-    name: name,
     expires_in: expires_in,
     date_of_creation: date_of_creation
   };
@@ -243,6 +245,7 @@ app.post(ACCESS_TOKEN_REQUEST_PATH, (req, res) => {
 
 app.get(USERINFO_REQUEST_URL, (req, res) => {
   const token_info = authHeader2personData[req.headers["authorization"]];
+
   if (token_info !== undefined) {
     console.log("userinfo response", token_info);
     if(!validateTokenExpiration(token_info.date_of_creation, token_info.expires_in)) {
