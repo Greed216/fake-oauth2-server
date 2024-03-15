@@ -150,7 +150,7 @@ function validateTokenExpiration(date_of_creation, expires_in) {
   return success;
 }
 
-function createToken(name, email, expires_in, refresh_token_expires_in, client_state) {
+function createToken(authId, name, email, expires_in, refresh_token_expires_in, client_state) {
   const code = "C-" + randomstring.generate(3);
   const accesstoken = "ACCT-" + randomstring.generate(6);
   const refreshtoken = "REFT-" + randomstring.generate(6);
@@ -167,7 +167,7 @@ function createToken(name, email, expires_in, refresh_token_expires_in, client_s
     token_type: "Bearer"
   };
   id_token2personData[id_token] = authHeader2personData["Bearer " + accesstoken] = {
-    id: 123, // id写死了，有其他场景的自行修改这里
+    id: authId, // id写死了，有其他场景的自行修改这里
     name: name,
     displayName: name,
     email: email,
@@ -177,6 +177,7 @@ function createToken(name, email, expires_in, refresh_token_expires_in, client_s
   };
   code2token[code] = token;
   refresh2personData[refreshtoken] = {
+    id: authId, 
     name: name,
     email: email,
     expires_in: expires_in,
@@ -211,7 +212,7 @@ function authRequestHandler(req, res) {
 app.get(AUTH_REQUEST_PATH, authRequestHandler);
 
 app.get("/login-as", (req, res) => {
-  const code = createToken(req.query.name, req.query.email, req.query.expires_in, req.query.refresh_token_expires_in, req.session.client_state);
+  const code = createToken(req.query.authId, req.query.name, req.query.email, req.query.expires_in, req.query.refresh_token_expires_in, req.session.client_state);
   if (req.session.redirect_uri) {
     let redirectUri = req.session.redirect_uri;
     let location = `${redirectUri}${redirectUri.includes('?') ? '&' : '?'}code=${code}`;
@@ -229,7 +230,7 @@ app.post(ACCESS_TOKEN_REQUEST_PATH, (req, res) => {
     if (req.body.grant_type === "refresh_token") {
       const refresh = req.body.refresh_token;
       const personData = refresh2personData[refresh];
-      code = createToken(personData.name, personData.email, personData.expires_in, personData.refresh_token_expires_in, null);
+      code = createToken(personData.authId, personData.name, personData.email, personData.expires_in, personData.refresh_token_expires_in, null);
       delete refresh2personData[refresh];
     } else {
       code = req.body.code;
